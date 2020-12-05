@@ -1,8 +1,5 @@
-// Inspiration: https://dribbble.com/shots/2343572-Countdown-timer
-// 👉 Output of the code: https://twitter.com/mironcatalin/status/1321856493382238208
-
-import * as React from 'react';
-import {Animated, Dimensions, StatusBar, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import React, {useCallback, useRef, useState} from 'react';
+import {Animated, Dimensions, StatusBar, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
 const {width, height} = Dimensions.get('window');
 const colors = {
@@ -16,10 +13,38 @@ const ITEM_SIZE = width * 0.38;
 const ITEM_SPACING = (width - ITEM_SIZE) / 2;
 
 export default function App() {
-  const scrollX = React.useRef(new Animated.Value(0)).current;
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const [duration, setDuration] = useState(timers[0]);
+  const timerAnimation = useRef(new Animated.Value(height / 2)).current;
+  const buttonAnimation = useRef(new Animated.Value(0)).current;
+  const animation = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(timerAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true
+      }),
+      Animated.timing(timerAnimation, {
+        toValue: height,
+        duration: duration * 1000,
+        useNativeDriver: true
+      })
+    ]).start(() => {
+    })
+  }, [duration]);
+
   return (
     <View style={styles.container}>
       <StatusBar hidden/>
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, {
+          height,
+          width,
+          backgroundColor: colors.red,
+          transform: [{
+            translateY: timerAnimation
+          }]
+        }]}/>
       <Animated.View
         style={[
           StyleSheet.absoluteFillObject,
@@ -30,8 +55,7 @@ export default function App() {
           },
         ]}>
         <TouchableOpacity
-          onPress={() => {
-          }}>
+          onPress={animation}>
           <View
             style={styles.roundButton}
           />
@@ -45,11 +69,16 @@ export default function App() {
           right: 0,
           flex: 1,
         }}>
+        <Text style={styles.text}>{duration}</Text>
         <Animated.FlatList data={timers}
                            keyExtractor={item => item.toString()}
                            horizontal
                            showsHorizontalScrollIndication={false}
                            bounces={false}
+                           onMomentumScrollEnd={event => {
+                             const index = Math.round(event.nativeEvent.contentOffset.x / ITEM_SIZE);
+                             setDuration(timers[index]);
+                           }}
                            contentContainerStyle={{
                              paddingHorizontal: ITEM_SPACING
                            }}
@@ -65,10 +94,24 @@ export default function App() {
                                index * ITEM_SIZE,
                                (index + 1) * ITEM_SIZE
                              ]
+                             const opacity = scrollX.interpolate({
+                               inputRange,
+                               outputRange: [.4, 1, .4]
+                             });
+
+                             const scale = scrollX.interpolate({
+                               inputRange,
+                               outputRange: [.7, 1, .7]
+                             });
                              return <View style={{width: ITEM_SIZE, justifyContent: 'center', alignItems: 'center'}}>
-                               <Text style={[styles.text]}>
+                               <Animated.Text style={[styles.text, {
+                                 opacity,
+                                 transform: [{
+                                   scale
+                                 }]
+                               }]}>
                                  {item}
-                               </Text>
+                               </Animated.Text>
                              </View>
                            }}
         />
